@@ -2,6 +2,19 @@
 
 A full-stack multi-tenancy and multi role user account capable application built with .NET and Blazor WebAssembly. Uses Keycloak for authentication and authorisation.
 
+## Screenshots
+
+<table>
+  <tr>
+    <td><img src="DemoImages/ScreenshotLight.png" alt="Light Mode" width="100%"/></td>
+    <td><img src="DemoImages/ScreenshotDark.png" alt="Dark Mode" width="100%"/></td>
+  </tr>
+  <tr>
+    <td align="center">Light Mode</td>
+    <td align="center">Dark Mode</td>
+  </tr>
+</table>
+
 ## Getting Started
 
 ### Starting the Application
