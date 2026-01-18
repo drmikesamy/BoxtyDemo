@@ -1,0 +1,27 @@
+@namespace Boxty.ClientApp.Pages.Components.Grids
+@using Boxty.SharedApp.DTOs.UserManagement
+@using Boxty.ClientApp.Pages.Components.Forms
+@using Boxty.ClientBase.Enums
+
+<CrudGrid T="SubjectDto" ItemForm="@SubjectDialogContent" LinkButtonRouteIdPrefix="subjects">
+    <ChildContent>
+        <PropertyColumn T="SubjectDto" TProperty="string" Property="x => x.FirstName" Title="First Name" />
+        <PropertyColumn T="SubjectDto" TProperty="string" Property="x => x.LastName" Title="Last Name" />
+        <PropertyColumn T="SubjectDto" TProperty="DateTime ?" Property="x => x.DOB" Title="Date of Birth"
+            Format="dd/MM/yyyy" />
+        <PropertyColumn T="SubjectDto" TProperty="string" Property="x => x.Email" Title="Email" />
+        <PropertyColumn T="SubjectDto" TProperty="string" Property="x => x.Telephone" Title="Telephone" />
+        <TemplateColumn T="SubjectDto" Title="Tenant">
+            <CellTemplate>
+                <LazyLookup TDto="TenantDto" FieldType="LazyLookupEnum.Text" @bind-ItemId="context.Item.TenantId" />
+            </CellTemplate>
+        </TemplateColumn>
+    </ChildContent>
+    <CustomButtons>
+        <SubjectCrudButtons T="SubjectDto" />
+    </CustomButtons>
+</CrudGrid>
+
+@code {
+    private RenderFragment SubjectDialogContent = @<SubjectsForm />;
+}

@@ -1,0 +1,45 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Attach to Chrome",
+            "request": "attach",
+            "type": "chrome",
+            "webRoot": "${workspaceFolder}/Client"
+        },
+        {
+            "name": "Launch and Debug Standalone Blazor WebAssembly App",
+            "type": "blazorwasm",
+            "request": "launch",
+            "cwd": "${workspaceFolder}/Client"
+        },
+        {
+            "name": "Debug .NET Core in Docker",
+            "type": "coreclr",
+            "request": "attach",
+            "processId": "${command:pickRemoteProcess}",
+            "sourceFileMap": {
+                "/app": "${workspaceRoot}/"
+            },
+            "pipeTransport": {
+                "pipeCwd": "${workspaceRoot}",
+                "pipeProgram": "docker",
+                "pipeArgs": [
+                    "exec",
+                    "-i",
+                    "Server"
+                ],
+                "quoteArgs": false,
+                "debuggerPath": "/vsdbg/vsdbg"
+            }
+        }
+    ],
+    "inputs": [
+        {
+            "id": "testFilter",
+            "description": "Test filter (e.g., TestMethodName or FullyQualifiedName~TestMethodName)",
+            "default": "",
+            "type": "promptString"
+        }
+    ]
+}

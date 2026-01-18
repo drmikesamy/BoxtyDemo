@@ -1,0 +1,241 @@
+@page "/settings"
+@using System.Net.Http.Json
+@using MudBlazor
+@using Boxty.SharedBase.DTOs.Auth;
+@using Boxty.SharedApp.DTOs.UserManagement
+@using Boxty.ClientApp.Pages.Components.Grids
+@using Boxty.ClientBase.Services
+@using Boxty.SharedApp.Extensions
+
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+
+<MudGrid>
+    <MudItem xs="12">
+        <MudText Typo="Typo.h1">Settings</MudText>
+    </MudItem>
+</MudGrid>
+
+<MudDialog @bind-Visible="addRoleDialogOpen" Options="@(new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true })">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Add New Role</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudTextField @bind-Value="newRoleName" Label="Role Name" Variant="Variant.Outlined" Required="true" RequiredError="Role name is required!" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => addRoleDialogOpen = false">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="HandleAddRole" Disabled="@string.IsNullOrWhiteSpace(newRoleName)">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<MudTabs Elevation="2" Rounded="true" PanelClass="pa-4">
+    <MudTabPanel Text="Authorization">
+        <MudToolBar Dense="true" Class="mb-4">
+        <!-- Role button not yet configured to communicate with keycloak -->
+            <!-- <MudSpacer />
+            <MudButton OnClick="OpenAddRoleDialog" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add">
+                Add Role
+            </MudButton> -->
+        </MudToolBar>
+        <MudTabs Elevation="1" Rounded="true" PanelClass="pa-4">
+            @foreach (var role in roles)
+            {
+                <MudTabPanel Text="@role.GetAuthDisplayName()">
+                    <MudToolBar Dense="true" Class="mb-2">
+                        <MudSpacer />
+                        <MudButton OnClick="() => OpenManagePermissionsDialog(role)" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Edit">Manage Permissions</MudButton>
+                    </MudToolBar>
+
+                    @if (role.Permissions != null && role.Permissions.Any())
+                    {
+                        <MudGrid Spacing="1" Justify="Justify.FlexStart">
+                            @foreach (var permission in role.Permissions.OrderBy(p => p.Name))
+                            {
+                                    <MudChip T="string" Text="@permission.Name" Color="@GetPermissionChipColor(permission.Name)" Size="Size.Small" />
+                            }
+                        </MudGrid>
+                    }
+                    else
+                    {
+                        <MudText>No permissions assigned to this role.</MudText>
+                    }
+                </MudTabPanel>
+            }
+        </MudTabs>
+    </MudTabPanel>
+</MudTabs>
+
+<MudDialog @bind-Visible="managePermissionsDialogOpen" Options="@(new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true })">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Manage Permissions for @(currentRoleForPermissionDialog?.GetAuthDisplayName())</MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (allPermissions.Any())
+        {
+            <MudText Typo="Typo.subtitle2" Class="mb-2">Select permissions:</MudText>
+            <MudPaper Class="overflow-y-auto" MaxHeight="300">
+                <MudList T="PermissionDto"
+                         SelectedValues="selectedPermissionsInDialog"
+                         SelectedValuesChanged="HandleSelectedPermissionsChanged"
+                         SelectionMode="SelectionMode.MultiSelection"
+                         CheckBoxColor="Color.Primary">
+                    @foreach (var perm in allPermissions.Where(p => !p.Name.Contains("BaseEntity")).OrderBy(p => p.Name))
+                    {
+                        <MudListItem Value="@perm" Text="@perm.Name" />
+                    }
+                </MudList>
+            </MudPaper>
+        }
+        else
+        {
+            <MudText>No permissions available in the system.</MudText>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => managePermissionsDialogOpen = false">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="HandleSavePermissionsForRole" Disabled="@(currentRoleForPermissionDialog == null)">Save Changes</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private List<RoleDto> roles = new();
+    private List<PermissionDto> allPermissions = new();
+
+    // Add Role Dialog state
+    private bool addRoleDialogOpen = false;
+    private string newRoleName = string.Empty;
+
+    // Manage Permissions Dialog state
+    private bool managePermissionsDialogOpen = false;
+    private RoleDto? currentRoleForPermissionDialog;
+    private List<PermissionDto> selectedPermissionsInDialog = new();
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        roles = await Http.GetFromJsonAsync<List<RoleDto>>("api/auth/roles/getall") ?? new();
+        allPermissions = await Http.GetFromJsonAsync<List<PermissionDto>>("api/auth/permissions/getall") ?? new();
+
+        foreach (var role in roles)
+        {
+            if (role.Permissions == null)
+            {
+                role.Permissions = new List<PermissionDto>();
+            }
+        }
+    }
+
+    private Color GetPermissionChipColor(string permissionName)
+    {
+        if (string.IsNullOrWhiteSpace(permissionName)) return Color.Default;
+
+        var nameLower = permissionName.ToLowerInvariant();
+
+        if (nameLower.Contains("create")) return Color.Success;
+        if (nameLower.Contains("update")) return Color.Warning;
+        if (nameLower.Contains("delete") || nameLower.Contains("remove")) return Color.Error;
+        if (nameLower.Contains("view") || nameLower.Contains("read") || nameLower.Contains("get")) return Color.Info; // Using Info as a distinct color for read-like operations. User asked for Grey, Color.Default is an option.
+
+        return Color.Primary;
+    }
+
+    private void OpenAddRoleDialog()
+    {
+        newRoleName = string.Empty;
+        addRoleDialogOpen = true;
+    }
+
+    private async Task HandleAddRole()
+    {
+        if (string.IsNullOrWhiteSpace(newRoleName))
+        {
+            Snackbar.Add("Role name cannot be empty.", MudBlazor.Severity.Warning);
+            return;
+        }
+        if (roles.Any(r => r.Name.Equals(newRoleName, StringComparison.OrdinalIgnoreCase)))
+        {
+            Snackbar.Add("Role with this name already exists.", MudBlazor.Severity.Warning);
+            return;
+        }
+
+        var newRole = new RoleDto { Name = newRoleName, Permissions = new List<PermissionDto>() };
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/auth/roles/create", newRole);
+            if (response.IsSuccessStatusCode)
+            {
+                roles.Add(newRole);
+                Snackbar.Add($"Role '{newRole.Name}' added successfully.", MudBlazor.Severity.Success);
+                addRoleDialogOpen = false;
+                newRoleName = string.Empty;
+                StateHasChanged();
+            }
+            else
+            {
+                Snackbar.Add($"Failed to add role: {response.ReasonPhrase}", MudBlazor.Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"An error occurred: {ex.Message}", MudBlazor.Severity.Error);
+        }
+    }
+
+    private void OpenManagePermissionsDialog(RoleDto role)
+    {
+        currentRoleForPermissionDialog = role;
+        var currentRolePermissionNames = role.Permissions.Select(p => p.Name).ToHashSet();
+        selectedPermissionsInDialog = allPermissions.Where(p => currentRolePermissionNames.Contains(p.Name)).ToList();
+        
+        managePermissionsDialogOpen = true;
+    }
+
+    private void HandleSelectedPermissionsChanged(IEnumerable<PermissionDto> newSelection)
+    {
+        selectedPermissionsInDialog = newSelection.ToList();
+    }
+
+    private async Task HandleSavePermissionsForRole()
+    {
+        if (currentRoleForPermissionDialog == null)
+        {
+            Snackbar.Add("No role selected for managing permissions.", MudBlazor.Severity.Error);
+            return;
+        }
+
+        currentRoleForPermissionDialog.Permissions = new List<PermissionDto>(selectedPermissionsInDialog);
+        
+        try
+        {
+            var response = await Http.PutAsJsonAsync($"api/auth/roles/update", currentRoleForPermissionDialog);
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add($"Permissions for role '{currentRoleForPermissionDialog.GetAuthDisplayName()}' updated successfully.", MudBlazor.Severity.Success);
+                // Refresh roles data from server
+                roles = await Http.GetFromJsonAsync<List<RoleDto>>("api/auth/roles/getall") ?? new();
+                foreach (var role in roles) // Re-ensure permissions list is not null after refresh
+                {
+                    if (role.Permissions == null)
+                    {
+                        role.Permissions = new List<PermissionDto>();
+                    }
+                }
+            }
+            else
+            {
+                Snackbar.Add($"Error updating permissions: {response.ReasonPhrase}", MudBlazor.Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"An error occurred: {ex.Message}", MudBlazor.Severity.Error);
+        }
+        finally
+        {
+            managePermissionsDialogOpen = false;
+            StateHasChanged();
+        }
+    }
+
+}

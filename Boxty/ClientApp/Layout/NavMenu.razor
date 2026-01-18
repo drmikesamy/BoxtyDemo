@@ -1,0 +1,40 @@
+﻿@using MudBlazor
+
+<MudNavMenu Class="ma-2">
+	<MudNavLink Icon="@Icons.Material.Filled.Home" Href="/" Match="NavLinkMatch.All">Home</MudNavLink>
+	<AuthorizeView Roles="administrator">
+		<MudNavLink Icon="@Icons.Material.Filled.Business" Href="/tenants" Match="NavLinkMatch.All">Tenants
+		</MudNavLink>
+		<MudNavLink Icon="@Icons.Material.Filled.People" Href="/subjects" Match="NavLinkMatch.All">Subjects
+		</MudNavLink>
+		<MudNavLink Icon="@Icons.Material.Filled.AllInbox" Href="/document-library" Match="NavLinkMatch.All">Documents
+			Library</MudNavLink>
+		<MudNavLink Icon="@Icons.Material.Filled.Settings" Href="/settings" Match="NavLinkMatch.All">Settings
+		</MudNavLink>
+	</AuthorizeView>
+	<AuthorizeView Roles="tenantadministrator">
+		<MudNavLink Icon="@Icons.Material.Filled.Business" Href="/tenants" Match="NavLinkMatch.All">Your Tenant
+		</MudNavLink>
+		<MudNavLink Icon="@Icons.Material.Filled.People" Href="/subjects" Match="NavLinkMatch.All">Subjects
+		</MudNavLink>
+	</AuthorizeView>
+	<AuthorizeView Roles="tenantlimitedadministrator">
+		<MudNavLink Icon="@Icons.Material.Filled.People" Href="/subjects" Match="NavLinkMatch.All">Subjects
+		</MudNavLink>
+	</AuthorizeView>
+	<AuthorizeView Roles="subject">
+		<MudNavLink Icon="@Icons.Material.Filled.CalendarMonth" Href="/document-library-subject"
+			Match="NavLinkMatch.All">Documents</MudNavLink>
+	</AuthorizeView>
+</MudNavMenu>
+
+@code {
+	private bool collapseNavMenu = true;
+
+	private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+	private void ToggleNavMenu()
+	{
+		collapseNavMenu = !collapseNavMenu;
+	}
+}

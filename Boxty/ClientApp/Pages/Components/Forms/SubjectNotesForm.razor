@@ -1,0 +1,13 @@
+@namespace Boxty.ClientApp.Pages.Components.Forms
+@using Boxty.SharedBase.Interfaces
+@using Boxty.ClientBase.Enums
+@using Boxty.SharedApp.DTOs.UserManagement
+
+<MudTextField @bind-Value="Model.Content" Label="Note" Lines="6" FullWidth="true" />
+
+@code {
+    [CascadingParameter(Name = "Model")] public SubjectNoteDto Model { get; set; } = default!;
+    [CascadingParameter(Name = "FormMode")] public FormModeEnum FormMode { get; set; } = FormModeEnum.Create;
+    [CascadingParameter(Name = "Tenant")] public ITenant Tenant { get; set; } = default!;
+    [CascadingParameter(Name = "Subject")] public ISubject Subject { get; set; } = default!;
+}

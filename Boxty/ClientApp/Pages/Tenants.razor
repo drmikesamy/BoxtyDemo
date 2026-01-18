@@ -1,0 +1,182 @@
+﻿@page "/tenants"
+@page "/tenants/{tenantId:guid}"
+@page "/tenants/{tenantId:guid}/{selectedTabId}"
+@using Boxty.ClientApp.Pages.Components.Forms
+@using Boxty.ClientBase.Enums
+@using Boxty.SharedBase.DTOs
+@using Boxty.SharedApp.DTOs.UserManagement
+@using MudBlazor
+@using Boxty.ClientApp.Pages.Components.Grids
+@using Boxty.ClientBase.Components
+@using Boxty.ClientBase.Services
+@using Boxty.SharedApp.Validators
+@inject ICrudService<TenantDto> TenantLookupService
+@inject ICrudService<TenantDocumentDto> DocumentLookupService
+@inject IAuthHelperService AuthHelperService
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+@attribute [Authorize]
+
+@if (selectedTenant == null && newTenant == null)
+{
+    <AuthorizeView Roles="administrator">
+        <MudText Typo="Typo.h1">Tenants</MudText>
+
+        <MudText Typo="Typo.body1">Search for a tenant</MudText>
+        <LazyLookup TDto="TenantDto" @bind-ItemId="SelectedTenantId" Label="Tenant Name" ItemChanged="OnTenantSelected" />
+    </AuthorizeView>
+    <TenantsGrid />
+}
+@if (newTenant != null)
+{
+    <MudText Typo="Typo.h2">Add a new Tenant</MudText>
+    <TenantsGrid />
+}
+else if (selectedTenant != null)
+{
+    <CascadingValue Name="Tenant" Value="selectedTenant" IsFixed="false">
+        <MudGrid Justify="Justify.SpaceBetween" Class="mb-4">
+            <MudItem>
+                <MudText Typo="Typo.h2">@selectedTenant.Name</MudText>
+            </MudItem>
+            <MudItem>
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="SelectNewTenant">
+                    Select Different Tenant
+                </MudButton>
+            </MudItem>
+        </MudGrid>
+        <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6" @ref="tabs"
+            ActivePanelIndexChanged="EventCallback.Factory.Create<int>(this, OnTabChanged)">
+            <MudTabPanel Text="Tenant" ID="@("tenant")">
+                <CrudForm T="TenantDto" Model="@selectedTenant" IsModal="false" FormMode="FormModeEnum.Edit">
+                    <ChildContent>
+                        <TenantsForm />
+                    </ChildContent>
+                </CrudForm>
+            </MudTabPanel>
+            <MudTabPanel Text="Subjects" ID="@("subjects")">
+                <SubjectsGrid />
+            </MudTabPanel>
+            <MudTabPanel Text="Documents" ID="@("documents")">
+                <DocumentBrowser TDto="TenantDocumentDto" TenantId="selectedTenant.Id"
+                    TValidator="TenantDocumentValidator" />
+            </MudTabPanel>
+            <MudTabPanel Text="Notes" ID="@("notes")">
+                <TenantNotesGrid />
+            </MudTabPanel>
+        </MudTabs>
+    </CascadingValue>
+}
+
+@code {
+    private MudTabs tabs = default!;
+    [Parameter] public Guid? tenantId { get; set; }
+    [Parameter] public string? selectedTabId { get; set; }
+    private Guid SelectedTenantId { get; set; } = Guid.Empty;
+    private List<TenantDocumentDto> documents = new();
+    private TenantDocumentDto newDocument = default!;
+    private TenantDto selectedTenant { get; set; } = default!;
+    private TenantDto newTenant { get; set; } = default!;
+
+    private void OnTabChanged(int index)
+    {
+        if (selectedTenant != null && tabs?.Panels != null && index >= 0 && index < tabs.Panels.Count)
+        {
+            var panel = tabs.Panels[index];
+            var tabId = panel.ID?.ToString();
+            if (!string.IsNullOrEmpty(tabId))
+            {
+                Navigation.NavigateTo($"/tenants/{selectedTenant.Id}/{tabId}");
+            }
+        }
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        var user = await AuthHelperService.GetUserAsync();
+        if (user != null && !user.IsInRole("administrator"))
+        {
+            var organizationId = await AuthHelperService.GetTenantIdAsync();
+            if (organizationId.HasValue)
+            {
+                SelectedTenantId = organizationId.Value;
+                selectedTenant = await TenantLookupService.GetItemById(SelectedTenantId, CancellationToken.None) ?? default!;
+            }
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (tenantId.HasValue)
+        {
+            SelectedTenantId = tenantId.Value;
+            selectedTenant = await TenantLookupService.GetItemById(tenantId.Value, CancellationToken.None) ?? default!;
+        }
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (!string.IsNullOrEmpty(selectedTabId) && tabs != null)
+        {
+            tabs.ActivatePanel(selectedTabId);
+        }
+    }
+
+    private void CreateTenant()
+    {
+        newTenant = new TenantDto();
+    }
+
+    private void OnTenantSelected(TenantDto tenant)
+    {
+        selectedTenant = tenant;
+        SelectedTenantId = tenant.Id;
+        Navigation.NavigateTo($"/tenants/{tenant.Id}");
+    }
+    private async Task HandleTenantCreate(TenantDto tenant)
+    {
+        await TenantLookupService.AddItem(tenant, CancellationToken.None);
+        newTenant = default!;
+        selectedTenant = tenant;
+        SelectedTenantId = tenant.Id;
+        Navigation.NavigateTo($"/tenants/{tenant.Id}");
+    }
+    private async Task HandleTenantUpdate(TenantDto tenant)
+    {
+        await TenantLookupService.UpdateItem(tenant, CancellationToken.None);
+    }
+    async Task DeleteTenant(TenantDto tenant)
+    {
+        if (tenant == null) return;
+        await TenantLookupService.DeleteItem(tenant.Id, CancellationToken.None);
+        selectedTenant = default!;
+    }
+    private void CancelTenantCreate()
+    {
+        newTenant = default!;
+    }
+    private async Task GetAllDocumentsByTenantId()
+    {
+        if (selectedTenant == null) return;
+        documents = (await DocumentLookupService.GetAllByTenantId(selectedTenant.Id,
+        CancellationToken.None)).ToList();
+        var creators = documents.Select(d => d.CreatedBy).Distinct().ToList();
+        newDocument = new TenantDocumentDto
+        {
+            Name = ""
+        };
+    }
+    private async Task OnDocumentSave()
+    {
+        await GetAllDocumentsByTenantId();
+    }
+
+    private void SelectNewTenant()
+    {
+        selectedTenant = default!;
+        SelectedTenantId = Guid.Empty;
+        newTenant = default!;
+        Navigation.NavigateTo("/tenants");
+        StateHasChanged();
+    }
+}

@@ -1,0 +1,19 @@
+﻿@page "/"
+@using Boxty.ClientBase.Services
+@using MudBlazor
+@inject IAuthHelperService AuthHelperService
+@attribute [Authorize]
+
+<PageTitle>Boxty - Home</PageTitle>
+
+<MudText Typo="Typo.h1">Welcome, @userName</MudText>
+<MudText Typo="Typo.body1">This is your home page. Use the navigation menu to access different sections of the application.</MudText>
+
+@code {
+    private string userName = string.Empty;
+    protected override async Task OnInitializedAsync()
+    {
+        userName = await AuthHelperService.GetFullNameAsync() ?? "User";
+        StateHasChanged();
+    }
+}

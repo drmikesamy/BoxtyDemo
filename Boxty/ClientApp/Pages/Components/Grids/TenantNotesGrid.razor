@@ -1,0 +1,18 @@
+@namespace Boxty.ClientApp.Pages.Components.Grids
+@using Boxty.ClientBase.Extensions
+@using Boxty.SharedApp.DTOs.UserManagement
+@using Boxty.ClientApp.Pages.Components.Forms
+
+<CrudGrid T="TenantNoteDto" ItemForm="@TenantNoteDialogContent">
+    <PropertyColumn T="TenantNoteDto" TProperty="string" Property="x => x.Content" Title="Content" />
+    <TemplateColumn T="TenantNoteDto" Title="Created Date">
+        <CellTemplate>
+            @context.Item.CreatedDate.ToLocalDisplayString(emptyText: "Not Available")
+        </CellTemplate>
+    </TemplateColumn>
+    <PropertyColumn T="TenantNoteDto" TProperty="string" Property="x => x.CreatedBy" Title="Created By" />
+</CrudGrid>
+
+@code {
+    private RenderFragment TenantNoteDialogContent = @<TenantNotesForm />;
+}

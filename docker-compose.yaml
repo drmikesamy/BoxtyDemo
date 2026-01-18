@@ -1,0 +1,85 @@
+services:
+  chapp.client:
+    container_name: Client
+    image: chapp.client
+    build:
+      context: .
+      dockerfile: Client.Dockerfile
+    ports:
+      - "5004:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      BLAZOR_ENVIRONMENT: Development
+
+  chapp.server:
+    container_name: chapp.server
+    image: chapp.server
+    build:
+      context: .
+      dockerfile: Server.Dockerfile
+    ports:
+      - "5005:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+    depends_on:
+      - chapp.database
+
+  chapp.database:
+    container_name: chapp.database
+    image: postgres:17.4
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123
+      POSTGRES_DB: postgres
+    ports:
+      - "5437:5432"
+    volumes:
+      - chapp-db:/var/lib/postgresql/data
+      - ./database-seeds/chapp-seed.sql:/docker-entrypoint-initdb.d/chapp-seed.sql:ro
+
+  chkeycloak.database:
+    container_name: chkeycloak.database
+    image: postgres:17.4
+    environment:
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: 123
+      POSTGRES_DB: keycloak
+    ports:
+      - "5436:5432"
+    volumes:
+      - chkeycloak-db:/var/lib/postgresql/data
+      - ./database-seeds/keycloak-seed.sql:/docker-entrypoint-initdb.d/keycloak-seed.sql:ro
+
+  chkeycloak:
+    image: keycloak/keycloak:26.1
+    container_name: chkeycloak
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: 123
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://chkeycloak.database:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: 123
+      KC_FEATURES: organization,admin-fine-grained-authz
+    ports:
+      - "8181:8080"
+    command: start-dev
+    depends_on:
+      - chkeycloak.database
+
+  chblobstorage:
+    container_name: chblobstorage
+    image: mcr.microsoft.com/azure-storage/azurite:latest
+    hostname: azurite
+    restart: always
+    command: "azurite --loose --blobHost 0.0.0.0 --queueHost 0.0.0.0"
+    ports:
+      - "10000:10000"
+      - "10001:10001"
+      - "10002:10002"
+    volumes:
+      - ./.containers/blob_storage/data:/chworkspace
+
+volumes:
+  chkeycloak-db:
+  chapp-db:

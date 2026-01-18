@@ -1,0 +1,178 @@
+﻿@page "/subjects"
+@page "/subjects/{subjectId:guid}"
+@page "/subjects/{subjectId:guid}/{selectedTabId}"
+@page "/subjects/{subjectId:guid}/{selectedTabId}/{internalTabId:guid}"
+@using Boxty.ClientApp.Pages.Components.Forms
+@using Boxty.ClientBase.Enums
+@using Boxty.ClientBase.Services
+@using Boxty.SharedBase.DTOs
+@using Boxty.ClientBase.Components
+@using Boxty.SharedApp.DTOs.UserManagement
+@using Boxty.SharedApp.Enums
+@using MudBlazor
+@using Boxty.ClientApp.Pages.Components.Grids
+@using Boxty.SharedApp.Validators
+@inject ICrudService<SubjectDto> SubjectLookupService
+@inject ICrudService<TenantDto> TenantLookupService
+@inject NavigationManager Navigation
+@inject IAuthHelperService AuthHelperService
+
+@attribute [Authorize]
+
+            @if (selectedSubject == null && newSubject == null && selectedTabId == null)
+            {
+                <MudText Typo="Typo.h1">Subjects</MudText>
+
+                <MudText Typo="Typo.body1">Select an subject to view details</MudText>
+                <LazyLookup TDto="SubjectDto" @bind-ItemId="selectedSubjectId"
+                    Label="Subject Name" ItemChanged="OnSubjectSelected" />
+                <SubjectsGrid />
+            }
+            @if (selectedSubject != null && selectedTenant != null)
+            {
+                <CascadingValue Name="Subject" Value="selectedSubject" IsFixed="false">
+                    <CascadingValue Name="Tenant" Value="selectedTenant" IsFixed="false">
+                        <CascadingValue Name="InternalTabId" Value="internalTabId" IsFixed="false">
+                            <MudGrid Justify="Justify.SpaceBetween" Class="mb-4">
+                                <MudItem>
+                                    <MudText Typo="Typo.h1">@selectedSubject.FirstName @selectedSubject.LastName</MudText>
+                                </MudItem>
+                                <MudItem>
+                                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="SelectNewSubject">
+                                        Select Different Subject
+                                    </MudButton>
+                                </MudItem>
+                            </MudGrid>
+                            <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6" @ref="tabs"
+                                ActivePanelIndexChanged="EventCallback.Factory.Create<int>(this, OnTabChanged)">
+                                <MudTabPanel Text="Subject" ID="@("subject")">
+                                    <CrudForm T="SubjectDto" Model="@selectedSubject" IsModal="false"
+                                        FormMode="FormModeEnum.Edit">
+                                        <ChildContent>
+                                            <SubjectsForm />
+                                        </ChildContent>
+                                        <CustomButtons>
+                                            <SubjectCrudButtons T="SubjectDto" />
+                                        </CustomButtons>
+                                    </CrudForm>
+                                </MudTabPanel>
+                                <MudTabPanel Text="Documents" ID="@("documents")">
+                                    <DocumentBrowser TDto="SubjectDocumentDto" SubjectId="selectedSubject.Id"
+                                        TValidator="SubjectDocumentValidator" />
+                                </MudTabPanel>
+                                <MudTabPanel Text="Notes" ID="@("notes")">
+                                    <SubjectNotesGrid />
+                                </MudTabPanel>
+                            </MudTabs>
+                        </CascadingValue>
+                    </CascadingValue>
+                </CascadingValue>
+            }
+            @if (selectedSubject != null && selectedTenant == null)
+            {
+                <MudAlert Severity="Severity.Warning">
+                    Loading subject information...
+                </MudAlert>
+            }
+
+
+@code {
+    [Parameter] public Guid? subjectId { get; set; }
+    [Parameter] public string? selectedTabId { get; set; }
+    [Parameter] public Guid? internalTabId { get; set; }
+    private MudTabs tabs = default!;
+    private Guid selectedSubjectId = Guid.Empty;
+    private SubjectDto? selectedSubject = default!;
+    private TenantDto? selectedTenant = default!;
+    private SubjectDto? newSubject = default!;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (subjectId.HasValue)
+        {
+            selectedSubject = await SubjectLookupService.GetItemById(subjectId.Value, CancellationToken.None);
+        }
+        var isAdmin = await AuthHelperService.IsUserInRole("administrator");
+        if (!isAdmin)
+        {
+            var currentTenant = await AuthHelperService.GetTenantIdAsync();
+            if (currentTenant != Guid.Empty && (selectedTenant == null || selectedTenant.Id != currentTenant))
+            {
+                selectedTenant = await TenantLookupService.GetItemById(currentTenant.Value, CancellationToken.None);
+            }
+        }
+        else if (selectedSubject != null)
+        {
+            selectedTenant = await TenantLookupService.GetItemById(selectedSubject.TenantId, CancellationToken.None);
+        }
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (!string.IsNullOrEmpty(selectedTabId) && tabs != null)
+        {
+            tabs.ActivatePanel(selectedTabId);
+        }
+    }
+
+    private void CreateSubject()
+    {
+        newSubject = new SubjectDto();
+    }
+
+    private void OnSubjectSelected(SubjectDto subject)
+    {
+        selectedSubject = subject;
+        selectedSubjectId = subject.Id;
+        Navigation.NavigateTo($"/subjects/{subject.Id}");
+    }
+
+    private void OnTabChanged(int index)
+    {
+        if (selectedSubject != null && tabs?.Panels != null && index >= 0 && index < tabs.Panels.Count)
+        {
+            var panel = tabs.Panels[index];
+            var tabId = panel.ID?.ToString();
+            if (!string.IsNullOrEmpty(tabId))
+            {
+                Navigation.NavigateTo($"/subjects/{selectedSubject.Id}/{tabId}");
+            }
+        }
+    }
+
+    private async Task HandleSubjectCreate(SubjectDto subject)
+    {
+        await SubjectLookupService.AddItem(subject, CancellationToken.None);
+        newSubject = default!;
+        selectedSubject = subject;
+        selectedSubjectId = subject.Id;
+        Navigation.NavigateTo($"/subjects/{subject.Id}");
+    }
+
+    private async Task HandleSubjectSave(SubjectDto subject)
+    {
+        await SubjectLookupService.UpdateItem(subject, CancellationToken.None);
+    }
+
+    private void CancelSubjectCreate()
+    {
+        newSubject = default!;
+    }
+
+    async Task DeleteSubject(SubjectDto subject)
+    {
+        if (subject == null) return;
+
+        await SubjectLookupService.DeleteItem(subject.Id, CancellationToken.None);
+        selectedSubject = default!;
+    }
+
+    private void SelectNewSubject()
+    {
+        selectedSubject = null;
+        selectedSubjectId = Guid.Empty;
+        newSubject = null;
+        Navigation.NavigateTo("/subjects");
+        StateHasChanged();
+    }
+}

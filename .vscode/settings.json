@@ -1,0 +1,21 @@
+{
+    "dotnet.testWindow.useTestingPlatformProtocol": true,
+    "dotnet.completion.showCompletionItemsFromUnimportedNamespaces": true,
+    "dotnet.projects.enableAutomaticRestore": true,
+    "dotnet.server.waitForDebugger": false,
+    "omnisharp.enableEditorConfigSupport": true,
+    "testing.automaticallyOpenPeekView": "never",
+    "testing.openTesting": "openOnTestStart",
+    "files.exclude": {
+        "**/bin": true,
+        "**/obj": true
+    },
+    "testing.automaticallyOpenTestResults": "openOnTestStart",
+    "[csharp]": {
+        "editor.defaultFormatter": "ms-dotnettools.csharp",
+        "editor.codeActionsOnSave": [
+            "source.organizeImports",
+            "source.fixAll"
+        ]
+    },
+}

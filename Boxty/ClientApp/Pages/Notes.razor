@@ -1,0 +1,19 @@
+@using MudBlazor
+
+<MudPaper Class="pa-4">
+    <MudTextField @bind-Value="NoteText" Label="Notes" Lines="16" FullWidth="true" variant="Variant.Outlined" />
+    <MudButton OnClick="SaveNote" Color="Color.Primary" variant="Variant.Filled" Class="mt-2">Save</MudButton>
+</MudPaper>
+
+@code {
+    [Parameter]
+    public string NoteText { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> OnSave { get; set; }
+
+    private async Task SaveNote()
+    {
+        await OnSave.InvokeAsync(NoteText);
+    }
+}

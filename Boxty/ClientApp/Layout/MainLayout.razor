@@ -1,0 +1,309 @@
+﻿@using Boxty.ClientBase.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using MudBlazor
+@using Boxty.SharedApp.DTOs.UserManagement
+@using Boxty.ClientBase.Components
+
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+@inject GlobalStateService GlobalStateService
+@inherits LayoutComponentBase
+
+<MudThemeProvider @bind-IsDarkMode="@_isDarkMode" Theme="MyCustomTheme" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+	@if (_isLoading)
+	{
+		<MudOverlay Visible="_isLoading" DarkBackground="true" ZIndex="9999">
+			<MudProgressCircular Color="Color.Secondary" Size="Size.Large" Indeterminate="true" />
+		</MudOverlay>
+	}
+	<MudAppBar Elevation="0">
+		<AuthorizeView>
+			<Authorized>
+				<MudIconButton Icon="@Icons.Material.Filled.Menu" Edge="Edge.Start" Variant="Variant.Text"
+					Color="Color.Tertiary" OnClick="@((e) => DrawerToggle())" />
+			</Authorized>
+		</AuthorizeView>
+		<img src="images/boxty.png" asp-append-version="true" width="40px" />
+		<MudText Typo="Typo.h4" Color="Color.Tertiary" Class="ml-3">Boxty</MudText>
+		<MudSpacer />
+		<MudIconButton Icon="@(_isDarkMode ? @Icons.Material.Filled.LightMode : @Icons.Material.Filled.DarkMode)" 
+			Color="Color.Inherit" 
+			OnClick="@ToggleTheme" 
+			Title="@(_isDarkMode ? "Switch to Light Theme" : "Switch to Dark Theme")" />
+		<AuthorizeView Roles="subject">
+			<Authorized>
+				@if (userId != Guid.Empty)
+				{
+					<AvatarImage TDto="SubjectDto" TDocumentDto="SubjectDocumentDto"
+						Letter="@userName?.Substring(0, 1).ToUpper()" UserId="@userId" />
+				}
+			</Authorized>
+		</AuthorizeView>
+		<AuthorizeView>
+			<Authorized>
+				<MudButton @onclick="Logout" EndIcon="@Icons.Material.Filled.Logout" Variant="Variant.Text"
+					Color="Color.Tertiary" Class="ml-2">Log out</MudButton>
+			</Authorized>
+			<NotAuthorized>
+				<MudButton Href="authentication/login" StartIcon="@Icons.Material.Filled.Login" Variant="Variant.Text"
+					Class="ml-2">Log in</MudButton>
+			</NotAuthorized>
+		</AuthorizeView>
+	</MudAppBar>
+	<AuthorizeView>
+		<Authorized>
+			<MudDrawer @bind-Open="@_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="0">
+				<MudNavMenu Class="ma-2">
+					<NavMenu />
+				</MudNavMenu>
+			</MudDrawer>
+		</Authorized>
+	</AuthorizeView>
+	<MudMainContent>
+		<MudContainer Class="mt-6 px-8" MaxWidth="MaxWidth.False">
+			@Body
+		</MudContainer>
+	</MudMainContent>
+</MudLayout>
+
+@code {
+	MudTheme MyCustomTheme = new MudTheme()
+	{
+		PaletteLight = new PaletteLight()
+		{
+			Primary = "#2C3E50",
+			Secondary = "#3498DB",
+			Tertiary = "#34495E",
+			AppbarBackground = "#FFFFFF",
+			AppbarText = "#2C3E50",
+			Background = "#F8F9FA",
+			BackgroundGray = "#ECEFF1",
+			Surface = "#FFFFFF",
+			DrawerBackground = "#FFFFFF",
+			DrawerText = "#2C3E50",
+			DrawerIcon = "#2C3E50",
+			TextPrimary = "#2C3E50",
+			TextSecondary = "#5A6C7D",
+			ActionDefault = "#5A6C7D",
+			ActionDisabled = "#B0BEC5",
+			Divider = "#E0E0E0",
+			DividerLight = "#F0F0F0",
+			TableLines = "#E0E0E0",
+			LinesDefault = "#E0E0E0",
+			LinesInputs = "#B0BEC5",
+		},
+		PaletteDark = new PaletteDark()
+		{
+			Primary = "#3498DB",
+			Secondary = "#2ECC71",
+			Tertiary = "#5DADE2",
+			AppbarBackground = "#1E1E1E",
+			AppbarText = "#E0E0E0",
+			Background = "#121212",
+			BackgroundGray = "#1E1E1E",
+			Surface = "#1E1E1E",
+			DrawerBackground = "#1E1E1E",
+			DrawerText = "#E0E0E0",
+			DrawerIcon = "#E0E0E0",
+			TextPrimary = "#E0E0E0",
+			TextSecondary = "#B0B0B0",
+			ActionDefault = "#B0B0B0",
+			ActionDisabled = "#4A4A4A",
+			Divider = "#2E2E2E",
+			DividerLight = "#252525",
+			TableLines = "#2E2E2E",
+			LinesDefault = "#2E2E2E",
+			LinesInputs = "#4A4A4A",
+		},
+		Typography = new Typography()
+		{
+			Default = new DefaultTypography()
+			{
+				FontFamily = new[] { "Inter", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif" },
+				FontSize = "1.1rem",
+				FontWeight = "400",
+				LineHeight = "1.5",
+				LetterSpacing = "normal"
+			},
+			H1 = new H1Typography()
+			{
+				FontFamily = new[] { "Poppins", "Inter", "sans-serif" },
+				FontSize = "2.5rem",
+				FontWeight = "600",
+				LineHeight = "2",
+				LetterSpacing = "-0.01562em"
+			},
+			H2 = new H2Typography()
+			{
+				FontFamily = new[] { "Poppins", "Inter", "sans-serif" },
+				FontSize = "2rem",
+				FontWeight = "600",
+				LineHeight = "1.5",
+				LetterSpacing = "-0.00833em"
+			},
+			H3 = new H3Typography()
+			{
+				FontFamily = new[] { "Poppins", "Inter", "sans-serif" },
+				FontSize = "1.75rem",
+				FontWeight = "600",
+				LineHeight = "1.3",
+				LetterSpacing = "normal"
+			},
+			H4 = new H4Typography()
+			{
+				FontFamily = new[] { "Poppins", "Inter", "sans-serif" },
+				FontSize = "1.5rem",
+				FontWeight = "600",
+				LineHeight = "1.2",
+				LetterSpacing = "0.00735em"
+			},
+			H5 = new H5Typography()
+			{
+				FontFamily = new[] { "Poppins", "Inter", "sans-serif" },
+				FontSize = "1.25rem",
+				FontWeight = "600",
+				LineHeight = "1.1",
+				LetterSpacing = "normal"
+			},
+			H6 = new H6Typography()
+			{
+				FontFamily = new[] { "Poppins", "Inter", "sans-serif" },
+				FontSize = "1.125rem",
+				FontWeight = "600",
+				LineHeight = "1.5",
+				LetterSpacing = "0.0075em"
+			},
+			Subtitle1 = new Subtitle1Typography()
+			{
+				FontFamily = new[] { "Inter", "sans-serif" },
+				FontSize = "1rem",
+				FontWeight = "500",
+				LineHeight = "1.5",
+				LetterSpacing = "0.00938em"
+			},
+			Subtitle2 = new Subtitle2Typography()
+			{
+				FontFamily = new[] { "Inter", "sans-serif" },
+				FontSize = "0.875rem",
+				FontWeight = "500",
+				LineHeight = "1.57",
+				LetterSpacing = "0.00714em"
+			},
+			Body1 = new Body1Typography()
+			{
+				FontFamily = new[] { "Inter", "sans-serif" },
+				FontSize = "1.1rem",
+				FontWeight = "400",
+				LineHeight = "1.5",
+				LetterSpacing = "0.00938em"
+			},
+			Body2 = new Body2Typography()
+			{
+				FontFamily = new[] { "Inter", "sans-serif" },
+				FontSize = "1.1rem",
+				FontWeight = "400",
+				LineHeight = "1.43",
+				LetterSpacing = "0.01071em"
+			},
+			Button = new ButtonTypography()
+			{
+				FontFamily = new[] { "Inter", "sans-serif" },
+				FontSize = "1rem",
+				FontWeight = "500",
+				LineHeight = "1.75",
+				LetterSpacing = "0.02857em",
+				TextTransform = "none"
+			},
+			Caption = new CaptionTypography()
+			{
+				FontFamily = new[] { "Inter", "sans-serif" },
+				FontSize = "0.75rem",
+				FontWeight = "400",
+				LineHeight = "1.66",
+				LetterSpacing = "0.03333em"
+			},
+			Overline = new OverlineTypography()
+			{
+				FontFamily = new[] { "Inter", "sans-serif" },
+				FontSize = "0.75rem",
+				FontWeight = "500",
+				LineHeight = "2.66",
+				LetterSpacing = "0.08333em"
+			}
+		},
+		LayoutProperties = new LayoutProperties()
+		{
+			DrawerWidthLeft = "260px",
+			DrawerWidthRight = "300px",
+			DefaultBorderRadius = "8px",
+			AppbarHeight = "64px",
+		}
+	};
+
+	bool _drawerOpen = true;
+	bool _isDarkMode = false;
+
+	bool authenticated;
+	string? userName;
+	Guid userId = Guid.Empty;
+
+	[CascadingParameter]
+	private Task<AuthenticationState> authenticationStateTask { get; set; } = default!;
+	private bool _isLoading = false;
+
+	protected override async Task OnInitializedAsync()
+	{
+		var authState = await authenticationStateTask;
+		var user = authState.User;
+		authenticated = user.Identity?.IsAuthenticated ?? false;
+
+		if (authenticated)
+		{
+			userName = user.Identity?.Name;
+			var userIdClaim = user.FindFirst("sub")?.Value;
+			if (Guid.TryParse(userIdClaim, out var userIdValue))
+			{
+				userId = userIdValue;
+			}
+		}
+
+		StateHasChanged();
+
+		GlobalStateService.OnStartLoading += ShowLoadingOverlay;
+		GlobalStateService.OnStopLoading += HideLoadingOverlay;
+	}
+
+	public void ShowLoadingOverlay()
+	{
+		_isLoading = true;
+		StateHasChanged();
+	}
+	public void HideLoadingOverlay()
+	{
+		_isLoading = false;
+		StateHasChanged();
+	}
+	private void Logout(MouseEventArgs args)
+	{
+		authenticated = false;
+		userName = null;
+		userId = Guid.Empty;
+		NavigationManager.NavigateToLogout("authentication/logout");
+		StateHasChanged();
+	}
+	void DrawerToggle()
+	{
+		_drawerOpen = !_drawerOpen;
+	}
+
+	void ToggleTheme()
+	{
+		_isDarkMode = !_isDarkMode;
+	}
+}

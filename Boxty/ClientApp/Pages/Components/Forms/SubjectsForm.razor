@@ -1,0 +1,60 @@
+@namespace Boxty.ClientApp.Pages.Components.Forms
+@using Boxty.SharedBase.Interfaces
+@using Boxty.SharedApp.DTOs.UserManagement
+@using Boxty.SharedApp.Validators
+@using Boxty.ClientBase.Components
+@using Boxty.ClientBase.Enums
+@using Boxty.ClientBase.Services
+@using Boxty.SharedBase.DTOs.Auth
+@using Boxty.SharedApp.Enums
+@using MudBlazor
+
+@inject IAuthHelperService AuthHelperService
+
+<MudGrid>
+    <MudItem xs="12" sm="6">
+        @if (FormMode == FormModeEnum.Edit)
+        {
+            <MudTextField @bind-Value="Model.Id" For="@(() => Model.Id)" Label="Subject ID" Variant="Variant.Outlined"
+                ReadOnly="true" />
+        }
+        <MudTextField @bind-Value="Model.FirstName" For="@(() => Model.FirstName)" Label="First Name"
+            Variant="Variant.Outlined" />
+        <MudTextField @bind-Value="Model.LastName" For="@(() => Model.LastName)" Label="Last Name"
+            Variant="Variant.Outlined" />
+        <MudDatePicker @bind-Date="Model.DOB" DateFormat="dd/MM/yyyy" Label="Date of Birth" For="@(() => Model.DOB)"
+            Variant="Variant.Outlined" />
+        <MudTextField @bind-Value="Model.Address1" For="@(() => Model.Address1)" Label="Address Line 1"
+            Variant="Variant.Outlined" />
+        <MudTextField @bind-Value="Model.Address2" For="@(() => Model.Address2)" Label="Address Line 2"
+            Variant="Variant.Outlined" />
+        <MudTextField @bind-Value="Model.Address3" For="@(() => Model.Address3)" Label="Address Line 3"
+            Variant="Variant.Outlined" />
+        <MudTextField @bind-Value="Model.Postcode" For="@(() => Model.Postcode)" Label="Postcode"
+            Variant="Variant.Outlined" />
+        <MudTextField @bind-Value="Model.Email" For="@(() => Model.Email)" Label="Email" Variant="Variant.Outlined" />
+    </MudItem>
+    <MudItem xs="12" sm="6">
+        <MudTextField @bind-Value="Model.Telephone" For="@(() => Model.Telephone)" Label="Telephone"
+            Variant="Variant.Outlined" />
+        <LazyLookup TDto="TenantDto"
+            FieldType="FormMode == FormModeEnum.Create && (Tenant == null || Tenant.Id == Guid.Empty) ? LazyLookupEnum.Search : LazyLookupEnum.ReadOnly"
+            @bind-ItemId="Model.TenantId" Label="Tenant Name" For="@(() => Model.TenantId)" />
+        <MudSwitch @bind-Value="Model.IsActive" Label="Active" Color="Color.Primary" />
+    </MudItem>
+</MudGrid>
+
+@code {
+    [CascadingParameter(Name = "Model")] public SubjectDto Model { get; set; } = default!;
+    [CascadingParameter(Name = "FormMode")] public FormModeEnum FormMode { get; set; } = FormModeEnum.Create;
+    [CascadingParameter(Name = "Tenant")] public ITenant Tenant { get; set; } = default!;
+    [CascadingParameter(Name = "Subject")] public ISubject Subject { get; set; } = default!;
+    public RenderFragment CustomButtons = @<SubjectCrudButtons T="SubjectDto" />;
+    protected override void OnInitialized()
+    {
+        if (FormMode == FormModeEnum.Create || Model.TenantId == Guid.Empty)
+        {
+            Model.TenantId = Tenant?.Id ?? Guid.Empty;
+        }
+    }
+}

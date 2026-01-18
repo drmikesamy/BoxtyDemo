@@ -1,0 +1,19 @@
+@page "/document-library"
+@using Boxty.ClientBase.Components
+@using Boxty.ClientBase.Services
+@using Boxty.SharedApp.DTOs.UserManagement
+@using Boxty.SharedApp.Validators
+@inject ICrudService<TenantDto> LookupService
+
+<DocumentBrowser TDto="TenantDocumentDto" TenantId="@tenantId" TValidator="TenantDocumentValidator" />
+
+@code {
+    [Inject]
+    private IAuthHelperService AuthHelperService { get; set; } = default!;
+    private Guid tenantId = Guid.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        tenantId = (await AuthHelperService.GetTenantIdAsync()) ?? Guid.Empty;
+    }
+}

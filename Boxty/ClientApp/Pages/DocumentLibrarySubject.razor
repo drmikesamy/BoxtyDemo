@@ -1,0 +1,25 @@
+@page "/document-library-subject"
+@using Boxty.ClientBase.Components
+@using Boxty.ClientBase.Services
+@using Boxty.SharedApp.DTOs.UserManagement
+@using Boxty.SharedApp.Validators
+@inject ICrudService<SubjectDto> LookupService
+@inject IAuthHelperService AuthHelperService
+
+@if (subjectId == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <DocumentBrowser TDto="SubjectDocumentDto" SubjectId="@subjectId.Value" TValidator="SubjectDocumentValidator" />
+}
+
+@code {
+    private Guid? subjectId = default;
+
+    protected override async Task OnInitializedAsync()
+    {
+        subjectId = await AuthHelperService.GetSubjectIdAsync();
+    }
+}

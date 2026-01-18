@@ -1,0 +1,14 @@
+@namespace Boxty.ClientApp.Pages.Components.Grids
+@using Boxty.ClientApp.Pages.Components.Forms
+@using Boxty.SharedApp.DTOs.UserManagement
+@using MudBlazor
+
+<CrudGrid T="TenantDto" ItemForm="@TenantDialogContent" LinkButtonRouteIdPrefix="tenants">
+        <PropertyColumn T="TenantDto" TProperty="string" Property="x => x.Name" Title="Name" />
+        <PropertyColumn T="TenantDto" TProperty="string" Property="x => x.Email" Title="Email" />
+        <PropertyColumn T="TenantDto" TProperty="string" Property="x => x.Telephone" Title="Telephone" />
+</CrudGrid>
+
+@code {
+    private RenderFragment TenantDialogContent = @<TenantsForm />;
+}
