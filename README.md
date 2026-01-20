@@ -35,6 +35,12 @@ This will:
 
 **Note:** Make sure Docker Desktop (or Docker Engine) is running before executing the docker compose command.
 
+Once the application is running, access it at **http://localhost:5004**
+
+**Default Login Credentials:**
+- **Username:** `admin`
+- **Password:** `123`
+
 ### Restarting Individual Services
 
 To rebuild and restart a specific service:
