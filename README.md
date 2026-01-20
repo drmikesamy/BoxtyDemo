@@ -74,3 +74,135 @@ Boxty/
 - [.NET SDK](https://dotnet.microsoft.com/download) (version 8.0 or later)
 - [Docker Desktop](https://www.docker.com/products/docker-desktop) or Docker Engine
 - [Docker Compose](https://docs.docker.com/compose/) (usually included with Docker Desktop)
+
+## Configuration
+
+### SMTP Email Configuration
+
+To enable email sending functionality, you need to configure SMTP settings in the server's appsettings files.
+
+Edit the following file(s) depending on your environment:
+- [Boxty/ServerApp/WebApi/appsettings.Development.json](Boxty/ServerApp/WebApi/appsettings.Development.json)
+- [Boxty/ServerApp/WebApi/appsettings.Staging.json](Boxty/ServerApp/WebApi/appsettings.Staging.json)
+- [Boxty/ServerApp/WebApi/appsettings.Production.json](Boxty/ServerApp/WebApi/appsettings.Production.json)
+
+Update the `Email` section with your SMTP provider details:
+
+```json
+"Email": {
+  "SenderAddress": "your-email@example.com",
+  "SenderName": "Your App Name",
+  "SmtpHost": "smtp.your-provider.com",
+  "SmtpPort": 465,
+  "SmtpUsername": "your-smtp-username",
+  "SmtpPassword": "your-smtp-password",
+  "EnableEmailSending": true
+}
+```
+
+**Common SMTP Providers:**
+- **Gmail**: `smtp.gmail.com`, port `587` (TLS) or `465` (SSL)
+- **Outlook/Office365**: `smtp.office365.com`, port `587`
+- **SendGrid**: `smtp.sendgrid.net`, port `587`
+- **AWS SES**: region-specific endpoint, port `587`
+
+**Note:** Set `EnableEmailSending` to `false` during development if you want to disable email functionality.
+
+## Development Scripts
+
+### Clone Module Script
+
+The `clone-module.sh` script helps you quickly scaffold a new module based on an existing one.
+
+**Usage:**
+
+```bash
+cd scripts
+./clone-module.sh
+```
+
+The script will:
+1. Prompt you for the new module name
+2. Ask which module to use as a template (UserManagement or Shared)
+3. Clone the selected module structure
+4. Clean up entity files, migrations, and authorization handlers
+5. Rename all files and namespaces to match your new module name
+
+This provides a clean starting point for creating new feature modules in your application.
+
+### Generate Entity Script
+
+The `generate-entity.sh` script automates the creation of new entities with all necessary boilerplate code.
+
+**Usage:**
+
+```bash
+cd scripts
+./generate-entity.sh
+```
+
+The script will:
+1. Display available modules and prompt you to select one
+2. Ask for the new entity name (in PascalCase, e.g., `Product`)
+3. Generate the following files:
+   - Entity class in the module's `Entities` folder
+   - DTO classes in the `SharedApp/DTOs` folder
+   - Mapper class for converting between entities and DTOs
+   - Repository interface and implementation
+   - Service interface and implementation with CRUD operations
+   - Controller with REST API endpoints
+   - Authorization handlers for fine-grained permissions
+
+The generated code follows the project's conventions and includes:
+- Multi-tenancy support
+- Fine-grained CRUD permissions
+- Soft delete functionality
+- Audit fields (CreatedAt, UpdatedAt, etc.)
+- Complete REST API endpoints
+
+**Example:**
+```bash
+./generate-entity.sh
+# Select module: 2) Calendar
+# Enter entity name: Event
+# Generates: Event entity, EventDto, EventMapper, EventService, EventController, etc.
+```
+
+### Running Database Migrations
+
+After generating entities or making changes to your entity models, you need to create and apply database migrations to update the database schema.
+
+**Usage:**
+
+```bash
+cd Boxty/ServerApp
+./run-migrations.sh
+```
+
+The script will:
+1. Display available modules with database contexts
+2. Prompt you to select which module's database to migrate
+3. Ask for a migration name (e.g., `AddProductEntity`, `UpdateUserFields`)
+4. Generate the migration files in the module's `Database/Migrations` folder
+5. Apply the migration to update the database schema
+
+**Prerequisites:**
+- Ensure the database Docker container is running (`docker compose up`)
+- Make sure your entity changes are saved before running migrations
+
+**Example Workflow:**
+```bash
+# 1. Generate a new entity
+cd scripts
+./generate-entity.sh
+
+# 2. Create and apply database migration
+cd ../Boxty/ServerApp
+./run-migrations.sh
+# Select module number corresponding to where you added the entity
+# Enter migration name: AddProductEntity
+
+# 3. The database schema is now updated with your new entity
+```
+
+**Note:** Migrations are automatically applied when you run the migration script. The changes will be reflected in your running database immediately.
